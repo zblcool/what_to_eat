@@ -1,8 +1,14 @@
 {
   "rules": {
+    "leaderboard": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
     "whatToEat": {
       ".read": "auth != null",
       ".write": "auth != null"
-    }
+    },
+    ".read": false,
+    ".write": false
   }
 }
