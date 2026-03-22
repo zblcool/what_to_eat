@@ -1,23 +1,40 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getDatabase } from "firebase/database";
+
+const sharedHanziHeroConfig = {
+  apiKey: "AIzaSyD5GTLSvUwNP64SRL9cYRwE0vZCUmi9VVM",
+  authDomain: "hanzi-7ff3a.firebaseapp.com",
+  databaseURL:
+    "https://hanzi-7ff3a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hanzi-7ff3a",
+  messagingSenderId: "1022443889912",
+  appId: "1:1022443889912:web:adc6196bb0ea94544f870d",
+  measurementId: "G-TBP0MSB1T3"
+};
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || sharedHanziHeroConfig.apiKey,
+  authDomain:
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || sharedHanziHeroConfig.authDomain,
+  databaseURL:
+    import.meta.env.VITE_FIREBASE_DATABASE_URL || sharedHanziHeroConfig.databaseURL,
+  projectId:
+    import.meta.env.VITE_FIREBASE_PROJECT_ID || sharedHanziHeroConfig.projectId,
+  messagingSenderId:
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ||
+    sharedHanziHeroConfig.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || sharedHanziHeroConfig.appId,
+  measurementId:
+    import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ||
+    sharedHanziHeroConfig.measurementId
 };
 
 const requiredKeys = [
   firebaseConfig.apiKey,
   firebaseConfig.authDomain,
+  firebaseConfig.databaseURL,
   firebaseConfig.projectId,
-  firebaseConfig.storageBucket,
   firebaseConfig.messagingSenderId,
   firebaseConfig.appId
 ];
@@ -25,8 +42,7 @@ const requiredKeys = [
 export const isFirebaseConfigured = requiredKeys.every(Boolean);
 
 const firebaseApp = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
-export const db = firebaseApp ? getFirestore(firebaseApp) : null;
-export const storage = firebaseApp ? getStorage(firebaseApp) : null;
+export const db = firebaseApp ? getDatabase(firebaseApp) : null;
 export const auth = firebaseApp ? getAuth(firebaseApp) : null;
 
 let firebaseReadyPromise: Promise<boolean> | null = null;

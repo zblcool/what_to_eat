@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "whatToEat": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

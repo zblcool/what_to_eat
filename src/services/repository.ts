@@ -1,15 +1,11 @@
 import {
-  type Firestore,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  setDoc
-} from "firebase/firestore";
-import { getDownloadURL, ref, type FirebaseStorage, uploadBytes } from "firebase/storage";
-import { db, ensureFirebaseReady, isFirebaseConfigured, storage } from "../lib/firebase";
+  type Database,
+  get,
+  ref as databaseRef,
+  remove,
+  set
+} from "firebase/database";
+import { db, ensureFirebaseReady, isFirebaseConfigured } from "../lib/firebase";
 import { getTodayDate, nowIso, toOrderLabel } from "../lib/date";
 import { sampleMenuItems } from "../lib/sampleData";
 import { createId, mergeOrderItems, sortByUpdatedAt } from "../lib/utils";
@@ -26,21 +22,28 @@ import type {
 
 const LOCAL_MENU_KEY = "what-to-eat.menu.v1";
 const LOCAL_ORDER_KEY = "what-to-eat.orders.v1";
+const ROOT_PATH = "whatToEat";
+const MENU_ITEMS_PATH = `${ROOT_PATH}/menuItems`;
+const ORDERS_PATH = `${ROOT_PATH}/orders`;
 
-function getDb(): Firestore {
+function getDb(): Database {
   if (!db) {
-    throw new Error("Firestore is not initialized.");
+    throw new Error("Realtime Database is not initialized.");
   }
 
   return db;
 }
 
-function getStorageInstance(): FirebaseStorage {
-  if (!storage) {
-    throw new Error("Storage is not initialized.");
+function toObjectMap<T extends { id: string }>(items: T[]) {
+  return Object.fromEntries(items.map((item) => [item.id, item]));
+}
+
+function fromObjectMap<T>(value: unknown): T[] {
+  if (!value || typeof value !== "object") {
+    return [];
   }
 
-  return storage;
+  return Object.values(value as Record<string, T>);
 }
 
 function getStatus(): RepositoryStatus {
@@ -99,19 +102,15 @@ function createOrder(date: string, items: OrderItem[], createdAt?: string): Dail
 
 async function seedSampleMenuIfNeeded() {
   if (isFirebaseConfigured && db) {
-    const firestore = getDb();
+    const database = getDb();
     await ensureFirebaseReady();
-    const snapshot = await getDocs(query(collection(firestore, "menuItems")));
+    const snapshot = await get(databaseRef(database, MENU_ITEMS_PATH));
 
-    if (!snapshot.empty) {
+    if (snapshot.exists()) {
       return;
     }
 
-    await Promise.all(
-      sampleMenuItems.map((item) =>
-        setDoc(doc(firestore, "menuItems", item.id), item)
-      )
-    );
+    await set(databaseRef(database, MENU_ITEMS_PATH), toObjectMap(sampleMenuItems));
     return;
   }
 
@@ -125,27 +124,16 @@ async function seedSampleMenuIfNeeded() {
 
 async function getMenuItems(): Promise<MenuItem[]> {
   if (isFirebaseConfigured && db) {
-    const firestore = getDb();
+    const database = getDb();
     await ensureFirebaseReady();
-    const snapshot = await getDocs(query(collection(firestore, "menuItems")));
-    return sortByUpdatedAt(snapshot.docs.map((item) => item.data() as MenuItem));
+    const snapshot = await get(databaseRef(database, MENU_ITEMS_PATH));
+    return sortByUpdatedAt(fromObjectMap<MenuItem>(snapshot.val()));
   }
 
   return sortByUpdatedAt(readJson<MenuItem[]>(LOCAL_MENU_KEY, []));
 }
 
 async function uploadImage(file: File): Promise<string> {
-  if (isFirebaseConfigured && storage) {
-    const firebaseStorage = getStorageInstance();
-    await ensureFirebaseReady();
-    const fileRef = ref(
-      firebaseStorage,
-      `menu-images/${Date.now()}-${file.name}`
-    );
-    await uploadBytes(fileRef, file);
-    return getDownloadURL(fileRef);
-  }
-
   return fileToDataUrl(file);
 }
 
@@ -154,11 +142,11 @@ async function saveMenuItem(draft: MenuDraft): Promise<MenuItem> {
   const imageUrl = draft.file ? await uploadImage(draft.file) : draft.imageUrl;
 
   if (isFirebaseConfigured && db) {
-    const firestore = getDb();
+    const database = getDb();
     await ensureFirebaseReady();
     const id = draft.id ?? createId("menu");
-    const itemRef = doc(firestore, "menuItems", id);
-    const existing = await getDoc(itemRef);
+    const itemRef = databaseRef(database, `${MENU_ITEMS_PATH}/${id}`);
+    const existing = await get(itemRef);
     const item: MenuItem = {
       id,
       name: draft.name.trim(),
@@ -169,10 +157,10 @@ async function saveMenuItem(draft: MenuDraft): Promise<MenuItem> {
       keepInLibrary: draft.keepInLibrary,
       createdByMode: draft.createdByMode,
       archived: false,
-      createdAt: existing.exists() ? (existing.data() as MenuItem).createdAt : now,
+      createdAt: existing.exists() ? (existing.val() as MenuItem).createdAt : now,
       updatedAt: now
     };
-    await setDoc(itemRef, item);
+    await set(itemRef, item);
     return item;
   }
 
@@ -205,9 +193,9 @@ async function saveMenuItem(draft: MenuDraft): Promise<MenuItem> {
 
 async function deleteMenuItem(id: string): Promise<void> {
   if (isFirebaseConfigured && db) {
-    const firestore = getDb();
+    const database = getDb();
     await ensureFirebaseReady();
-    await deleteDoc(doc(firestore, "menuItems", id));
+    await remove(databaseRef(database, `${MENU_ITEMS_PATH}/${id}`));
     return;
   }
 
@@ -228,10 +216,10 @@ function writeLocalOrders(orders: Record<string, DailyOrder>) {
 
 async function getOrderByDate(date: string): Promise<DailyOrder | null> {
   if (isFirebaseConfigured && db) {
-    const firestore = getDb();
+    const database = getDb();
     await ensureFirebaseReady();
-    const snapshot = await getDoc(doc(firestore, "orders", date));
-    return snapshot.exists() ? (snapshot.data() as DailyOrder) : null;
+    const snapshot = await get(databaseRef(database, `${ORDERS_PATH}/${date}`));
+    return snapshot.exists() ? (snapshot.val() as DailyOrder) : null;
   }
 
   const orders = readLocalOrders();
@@ -256,13 +244,13 @@ async function saveOrder(date: string, items: OrderDraftItem[]): Promise<DailyOr
     }));
 
   if (isFirebaseConfigured && db) {
-    const firestore = getDb();
+    const database = getDb();
     await ensureFirebaseReady();
-    const orderRef = doc(firestore, "orders", date);
-    const existing = await getDoc(orderRef);
-    const existingOrder = existing.exists() ? (existing.data() as DailyOrder) : null;
+    const orderRef = databaseRef(database, `${ORDERS_PATH}/${date}`);
+    const existing = await get(orderRef);
+    const existingOrder = existing.exists() ? (existing.val() as DailyOrder) : null;
     const order = createOrder(date, orderItems, existingOrder?.createdAt);
-    await setDoc(orderRef, order);
+    await set(orderRef, order);
     return order;
   }
 
@@ -281,9 +269,9 @@ async function addItemsToOrder(date: string, items: OrderDraftItem[]): Promise<D
   order.status = existingOrder?.status ?? "submitted";
 
   if (isFirebaseConfigured && db) {
-    const firestore = getDb();
+    const database = getDb();
     await ensureFirebaseReady();
-    await setDoc(doc(firestore, "orders", date), order);
+    await set(databaseRef(database, `${ORDERS_PATH}/${date}`), order);
     return order;
   }
 
@@ -310,9 +298,9 @@ async function updateExistingOrder(
   updatedOrder.updatedAt = nowIso();
 
   if (isFirebaseConfigured && db) {
-    const firestore = getDb();
+    const database = getDb();
     await ensureFirebaseReady();
-    await setDoc(doc(firestore, "orders", date), updatedOrder);
+    await set(databaseRef(database, `${ORDERS_PATH}/${date}`), updatedOrder);
     return updatedOrder;
   }
 
