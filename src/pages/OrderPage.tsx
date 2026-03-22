@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { LocalizedLink, useI18n } from "../i18n";
 import { useApp } from "../state/AppContext";
 import { formatDisplayDate, getTodayDate } from "../lib/date";
 import type { DailyOrder, OrderDraftItem } from "../types";
@@ -42,6 +43,7 @@ function toDraftFromMenu(menuItem: {
 export function OrderPage() {
   const { date = getTodayDate() } = useParams();
   const { fetchOrderByDate, menuItems, saveOrderItems } = useApp();
+  const { text } = useI18n();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedHint, setSavedHint] = useState("");
@@ -82,30 +84,33 @@ export function OrderPage() {
 
   return (
     <AppShell
-      title="订单页"
-      subtitle={`${date} 创建的订单明早可直接在备餐页查看。`}
+      title={text("订单页", "Order Details")}
+      subtitle={text(
+        `${date} 创建的订单明早可直接在备餐页查看。`,
+        `The order created on ${date} will be ready for tomorrow's prep view.`
+      )}
       actions={
-        <Link className="secondary-button compact-button" to={`/progress/${date}`}>
-          配送页
-        </Link>
+        <LocalizedLink className="secondary-button compact-button" to={`/progress/${date}`}>
+          {text("配送页", "Progress")}
+        </LocalizedLink>
       }
     >
       <section className="card">
         <div className="section-header">
           <div>
-            <p className="section-eyebrow">订单概览</p>
-            <h2>{date} 今日订单</h2>
+            <p className="section-eyebrow">{text("订单概览", "Order Overview")}</p>
+            <h2>{date} {text("今日订单", "Daily Order")}</h2>
             <p className="muted-text">{formatDisplayDate(date)}</p>
           </div>
           {savedHint ? <span className="success-hint">{savedHint}</span> : null}
         </div>
 
         {loading ? (
-          <p className="muted-text">正在读取订单...</p>
+          <p className="muted-text">{text("正在读取订单...", "Loading order...")}</p>
         ) : draftItems.length === 0 ? (
           <div className="empty-card">
-            <h3>这个日期还没有早餐单</h3>
-            <p className="muted-text">你可以先去点餐页下单，或者直接从下面快速添加。</p>
+            <h3>{text("这个日期还没有早餐单", "No breakfast order for this date")}</h3>
+            <p className="muted-text">{text("你可以先去点餐页下单，或者直接从下面快速添加。", "Start from the menu page, or use quick add below.")}</p>
           </div>
         ) : (
           <div className="stack-list">
@@ -113,7 +118,7 @@ export function OrderPage() {
               <article className="ticket-row" key={`${item.menuItemId ?? item.name}-${index}`}>
                 <div>
                   <h3>{item.name}</h3>
-                  <p className="muted-text">{item.description || item.note || "早餐备餐项"}</p>
+                  <p className="muted-text">{item.description || item.note || text("早餐备餐项", "Breakfast prep item")}</p>
                 </div>
                 <div className="line-item-actions">
                   <div className="quantity-control">
@@ -158,7 +163,7 @@ export function OrderPage() {
                       )
                     }
                   >
-                    删除
+                    {text("删除", "Remove")}
                   </button>
                 </div>
               </article>
@@ -170,8 +175,8 @@ export function OrderPage() {
       <section className="card">
         <div className="section-header">
           <div>
-            <p className="section-eyebrow">快速添加</p>
-            <h3>从当前菜单库继续补单</h3>
+            <p className="section-eyebrow">{text("快速添加", "Quick Add")}</p>
+            <h3>{text("从当前菜单库继续补单", "Add more from the current menu")}</h3>
           </div>
         </div>
         <div className="quick-add-grid">
@@ -191,7 +196,7 @@ export function OrderPage() {
 
       <section className="sticky-action-card">
         <div>
-          <p className="tiny-text">修改后保存，会更新当前日期对应的订单内容。</p>
+          <p className="tiny-text">{text("修改后保存，会更新当前日期对应的订单内容。", "Save changes to update this date's order.")}</p>
         </div>
         <button
           type="button"
@@ -202,14 +207,14 @@ export function OrderPage() {
             try {
               const savedOrder = await saveOrderItems(date, draftItems);
               setOrder(savedOrder);
-              setSavedHint("已保存");
+              setSavedHint(text("已保存", "Saved"));
               window.setTimeout(() => setSavedHint(""), 1600);
             } finally {
               setSaving(false);
             }
           }}
         >
-          {saving ? "保存中..." : "保存订单修改"}
+          {saving ? text("保存中...", "Saving...") : text("保存订单修改", "Save Changes")}
         </button>
       </section>
     </AppShell>

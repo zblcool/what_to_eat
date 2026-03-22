@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
+import { LocalizedLink, useI18n } from "../i18n";
 import { useApp } from "../state/AppContext";
 import { getTodayDate } from "../lib/date";
 
@@ -16,19 +17,23 @@ export function CartPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const today = getTodayDate();
+  const { localizePath, text } = useI18n();
 
   return (
     <AppShell
-      title="购物车 / 结算"
-      subtitle="没有付款流程，提交后会生成今天创建、供明早参考的订单。"
+      title={text("购物车 / 结算", "Cart / Review")}
+      subtitle={text(
+        "没有付款流程，提交后会生成今天创建、供明早参考的订单。",
+        "There is no payment step. Submitting saves today's order for tomorrow morning."
+      )}
     >
       {cart.length === 0 ? (
         <section className="card empty-card">
-          <h2>购物车还是空的</h2>
-          <p className="muted-text">先去挑几样明早想吃的早餐吧。</p>
-          <Link className="primary-button" to="/menu">
-            返回点餐页
-          </Link>
+          <h2>{text("购物车还是空的", "Your cart is empty")}</h2>
+          <p className="muted-text">{text("先去挑几样明早想吃的早餐吧。", "Pick a few breakfast items first.")}</p>
+          <LocalizedLink className="primary-button" to="/menu">
+            {text("返回点餐页", "Back To Menu")}
+          </LocalizedLink>
         </section>
       ) : (
         <>
@@ -40,13 +45,17 @@ export function CartPage() {
                     {item.imageUrl ? (
                       <img alt={item.name} src={item.imageUrl} />
                     ) : (
-                      <div className="dish-placeholder small">{item.category || "早餐"}</div>
+                      <div className="dish-placeholder small">{item.category || text("早餐", "Breakfast")}</div>
                     )}
                   </div>
                   <div>
                     <h3>{item.name}</h3>
                     {item.description ? <p className="muted-text">{item.description}</p> : null}
-                    <p className="tiny-text">{item.keepInLibrary ? "会保留在菜单库" : "仅本次订单使用"}</p>
+                    <p className="tiny-text">
+                      {item.keepInLibrary
+                        ? text("会保留在菜单库", "Saved in the family menu")
+                        : text("仅本次订单使用", "Only for this order")}
+                    </p>
                   </div>
                 </div>
                 <div className="line-item-actions">
@@ -70,7 +79,7 @@ export function CartPage() {
                     className="ghost-button"
                     onClick={() => removeCartItem(item.id)}
                   >
-                    删除
+                    {text("删除", "Remove")}
                   </button>
                 </div>
               </article>
@@ -80,21 +89,21 @@ export function CartPage() {
           <section className="card summary-card">
             <div className="summary-list">
               <div className="summary-row">
-                <span>订单名称</span>
-                <strong>{today} 今日订单</strong>
+                <span>{text("订单名称", "Order Name")}</span>
+                <strong>{today} {text("今日订单", "Daily Order")}</strong>
               </div>
               <div className="summary-row">
-                <span>总份数</span>
+                <span>{text("总份数", "Total Items")}</span>
                 <strong>{cartCount}</strong>
               </div>
               <div className="summary-row">
-                <span>说明</span>
-                <strong>今天提交，明早制作</strong>
+                <span>{text("说明", "Note")}</span>
+                <strong>{text("今天提交，明早制作", "Submit today, cook tomorrow")}</strong>
               </div>
             </div>
             <div className="action-row">
               <button type="button" className="secondary-button" onClick={clearCart}>
-                清空购物车
+                {text("清空购物车", "Clear Cart")}
               </button>
               <button
                 type="button"
@@ -104,13 +113,13 @@ export function CartPage() {
                   setSubmitting(true);
                   try {
                     const order = await submitCartToTodayOrder();
-                    navigate(`/orders/${order.orderDate}`);
+                    navigate(localizePath(`/orders/${order.orderDate}`));
                   } finally {
                     setSubmitting(false);
                   }
                 }}
               >
-                {submitting ? "提交中..." : "提交订单"}
+                {submitting ? text("提交中...", "Submitting...") : text("提交订单", "Submit Order")}
               </button>
             </div>
           </section>

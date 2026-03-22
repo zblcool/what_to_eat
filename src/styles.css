@@ -115,6 +115,11 @@ img {
   justify-content: flex-end;
 }
 
+.footer-status-banner {
+  margin-top: 18px;
+  margin-bottom: 18px;
+}
+
 .mode-switch,
 .chip-row,
 .action-row,

@@ -16,6 +16,7 @@ import type {
   OrderDraftItem,
   OrderProgressStage,
   RepositoryStatus,
+  RuntimeNotice,
   UserMode
 } from "../types";
 
@@ -25,6 +26,7 @@ interface AppContextValue {
   managerUnlocked: boolean;
   unlockManager: (pinInput: string) => boolean;
   repositoryStatus: RepositoryStatus;
+  runtimeNotice: RuntimeNotice | null;
   bootstrapping: boolean;
   menuItems: MenuItem[];
   categories: string[];
@@ -93,6 +95,7 @@ function readLocalMode(): UserMode {
 export function AppProvider({ children }: PropsWithChildren) {
   const [bootstrapping, setBootstrapping] = useState(true);
   const [repositoryStatus] = useState<RepositoryStatus>(repository.getStatus());
+  const [runtimeNotice, setRuntimeNotice] = useState<RuntimeNotice | null>(null);
   const [mode, setModeState] = useState<UserMode>(readLocalMode);
   const [managerUnlocked, setManagerUnlocked] = useState(
     sessionStorage.getItem(MANAGER_SESSION_KEY) === "unlocked"
@@ -118,6 +121,13 @@ export function AppProvider({ children }: PropsWithChildren) {
         if (!cancelled) {
           setMenuItems(items);
         }
+      } catch (error) {
+        if (!cancelled) {
+          setRuntimeNotice({
+            message:
+              error instanceof Error ? error.message : "Failed to load menu data."
+          });
+        }
       } finally {
         if (!cancelled) {
           setBootstrapping(false);
@@ -133,8 +143,16 @@ export function AppProvider({ children }: PropsWithChildren) {
   }, []);
 
   async function refreshMenu() {
-    const items = await repository.getMenuItems();
-    setMenuItems(items);
+    try {
+      const items = await repository.getMenuItems();
+      setMenuItems(items);
+      setRuntimeNotice(null);
+    } catch (error) {
+      setRuntimeNotice({
+        message: error instanceof Error ? error.message : "Failed to refresh menu."
+      });
+      throw error;
+    }
   }
 
   function setMode(nextMode: UserMode) {
@@ -172,10 +190,19 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   async function addCustomDishToCart(draft: MenuDraft) {
     if (draft.keepInLibrary) {
-      const savedItem = await repository.saveMenuItem(draft);
-      await refreshMenu();
-      addMenuItemToCart(savedItem);
-      return;
+      try {
+        const savedItem = await repository.saveMenuItem(draft);
+        await refreshMenu();
+        addMenuItemToCart(savedItem);
+        setRuntimeNotice(null);
+        return;
+      } catch (error) {
+        setRuntimeNotice({
+          message:
+            error instanceof Error ? error.message : "Failed to save dish."
+        });
+        throw error;
+      }
     }
 
     const imageUrl = draft.file ? await repository.uploadImage(draft.file) : draft.imageUrl;
@@ -215,50 +242,142 @@ export function AppProvider({ children }: PropsWithChildren) {
   }
 
   async function submitCartToTodayOrder() {
-    const today = getTodayDate();
-    const draftItems = cart.map(cartToOrderDraft);
-    const order = await repository.addItemsToOrder(today, draftItems);
-    setCart([]);
-    return order;
+    try {
+      const today = getTodayDate();
+      const draftItems = cart.map(cartToOrderDraft);
+      const order = await repository.addItemsToOrder(today, draftItems);
+      setCart([]);
+      setRuntimeNotice(null);
+      return order;
+    } catch (error) {
+      setRuntimeNotice({
+        message:
+          error instanceof Error ? error.message : "Failed to submit order."
+      });
+      throw error;
+    }
   }
 
   async function fetchOrderByDate(date: string) {
-    return repository.getOrderByDate(date);
+    try {
+      const order = await repository.getOrderByDate(date);
+      setRuntimeNotice(null);
+      return order;
+    } catch (error) {
+      setRuntimeNotice({
+        message: error instanceof Error ? error.message : "Failed to load order."
+      });
+      throw error;
+    }
   }
 
   async function saveOrderItems(date: string, items: OrderDraftItem[]) {
-    return repository.saveOrder(date, items);
+    try {
+      const order = await repository.saveOrder(date, items);
+      setRuntimeNotice(null);
+      return order;
+    } catch (error) {
+      setRuntimeNotice({
+        message: error instanceof Error ? error.message : "Failed to save order."
+      });
+      throw error;
+    }
   }
 
   async function addItemsToOrder(date: string, items: OrderDraftItem[]) {
-    return repository.addItemsToOrder(date, items);
+    try {
+      const order = await repository.addItemsToOrder(date, items);
+      setRuntimeNotice(null);
+      return order;
+    } catch (error) {
+      setRuntimeNotice({
+        message: error instanceof Error ? error.message : "Failed to add items."
+      });
+      throw error;
+    }
   }
 
   async function saveMenuLibraryItem(draft: MenuDraft) {
-    const savedItem = await repository.saveMenuItem(draft);
-    await refreshMenu();
-    return savedItem;
+    try {
+      const savedItem = await repository.saveMenuItem(draft);
+      await refreshMenu();
+      setRuntimeNotice(null);
+      return savedItem;
+    } catch (error) {
+      setRuntimeNotice({
+        message: error instanceof Error ? error.message : "Failed to save menu item."
+      });
+      throw error;
+    }
   }
 
   async function deleteMenuLibraryItem(id: string) {
-    await repository.deleteMenuItem(id);
-    await refreshMenu();
+    try {
+      await repository.deleteMenuItem(id);
+      await refreshMenu();
+      setRuntimeNotice(null);
+    } catch (error) {
+      setRuntimeNotice({
+        message:
+          error instanceof Error ? error.message : "Failed to delete menu item."
+      });
+      throw error;
+    }
   }
 
   async function setOrderItemQuantity(date: string, itemId: string, quantity: number) {
-    return repository.updateOrderItemQuantity(date, itemId, quantity);
+    try {
+      const order = await repository.updateOrderItemQuantity(date, itemId, quantity);
+      setRuntimeNotice(null);
+      return order;
+    } catch (error) {
+      setRuntimeNotice({
+        message:
+          error instanceof Error ? error.message : "Failed to update quantity."
+      });
+      throw error;
+    }
   }
 
   async function removeOrderItem(date: string, itemId: string) {
-    return repository.removeOrderItem(date, itemId);
+    try {
+      const order = await repository.removeOrderItem(date, itemId);
+      setRuntimeNotice(null);
+      return order;
+    } catch (error) {
+      setRuntimeNotice({
+        message: error instanceof Error ? error.message : "Failed to remove item."
+      });
+      throw error;
+    }
   }
 
   async function togglePrepDone(date: string, itemId: string, prepDone: boolean) {
-    return repository.togglePrepDone(date, itemId, prepDone);
+    try {
+      const order = await repository.togglePrepDone(date, itemId, prepDone);
+      setRuntimeNotice(null);
+      return order;
+    } catch (error) {
+      setRuntimeNotice({
+        message:
+          error instanceof Error ? error.message : "Failed to update prep state."
+      });
+      throw error;
+    }
   }
 
   async function setOrderStatus(date: string, status: OrderProgressStage) {
-    return repository.setOrderStatus(date, status);
+    try {
+      const order = await repository.setOrderStatus(date, status);
+      setRuntimeNotice(null);
+      return order;
+    } catch (error) {
+      setRuntimeNotice({
+        message:
+          error instanceof Error ? error.message : "Failed to update progress."
+      });
+      throw error;
+    }
   }
 
   const value: AppContextValue = {
@@ -267,6 +386,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     managerUnlocked,
     unlockManager,
     repositoryStatus,
+    runtimeNotice,
     bootstrapping,
     menuItems,
     categories: getCategories(menuItems),

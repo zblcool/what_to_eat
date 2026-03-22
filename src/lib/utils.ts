@@ -90,7 +90,9 @@ export function getCategories(menuItems: MenuItem[]): string[] {
     menuItems.map((item) => item.category).filter(Boolean) as string[]
   );
 
-  return ["全部", ...Array.from(categorySet).sort((left, right) => left.localeCompare(right, "zh-CN"))];
+  return Array.from(categorySet).sort((left, right) =>
+    left.localeCompare(right, "zh-CN")
+  );
 }
 
 export function orderItemsCount(items: Array<{ quantity: number }>): number {

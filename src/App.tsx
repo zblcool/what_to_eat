@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useI18n } from "./i18n";
 import { HomePage } from "./pages/HomePage";
 import { MenuPage } from "./pages/MenuPage";
 import { CartPage } from "./pages/CartPage";
@@ -6,6 +7,12 @@ import { OrderPage } from "./pages/OrderPage";
 import { ProgressPage } from "./pages/ProgressPage";
 import { PrepPage } from "./pages/PrepPage";
 import { ManagePage } from "./pages/ManagePage";
+
+function FallbackRedirect() {
+  const { localizePath } = useI18n();
+
+  return <Navigate replace to={localizePath("/")} />;
+}
 
 export default function App() {
   return (
@@ -17,7 +24,7 @@ export default function App() {
       <Route element={<ProgressPage />} path="/progress/:date" />
       <Route element={<PrepPage />} path="/prep" />
       <Route element={<ManagePage />} path="/manage" />
-      <Route element={<Navigate replace to="/" />} path="*" />
+      <Route element={<FallbackRedirect />} path="*" />
     </Routes>
   );
 }

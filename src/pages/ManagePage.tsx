@@ -2,28 +2,36 @@ import { useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { DishForm } from "../components/DishForm";
 import { ModeGate } from "../components/ModeGate";
+import { useI18n } from "../i18n";
 import { useApp } from "../state/AppContext";
 import type { MenuItem } from "../types";
 
 export function ManagePage() {
   const { deleteMenuLibraryItem, menuItems, saveMenuLibraryItem } = useApp();
+  const { text } = useI18n();
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   return (
     <AppShell
-      title="菜单库管理"
-      subtitle="在这里维护家庭早餐菜单，也能上传图片和补充做法说明。"
+      title={text("菜单库管理", "Menu Management")}
+      subtitle={text(
+        "在这里维护家庭早餐菜单，也能上传图片和补充做法说明。",
+        "Manage the family breakfast menu and edit prep notes here."
+      )}
     >
       <ModeGate
-        title="菜单库管理需要做饭模式"
-        description="这里可以新增、编辑、删除家庭菜单库中的菜品。"
+        title={text("菜单库管理需要做饭模式", "Menu management requires kitchen mode")}
+        description={text(
+          "这里可以新增、编辑、删除家庭菜单库中的菜品。",
+          "Add, edit, and delete dishes in the family menu here."
+        )}
       >
         <section className="card">
           <div className="section-header">
             <div>
-              <p className="section-eyebrow">菜单库维护</p>
-              <h2>当前共 {menuItems.length} 道菜</h2>
+              <p className="section-eyebrow">{text("菜单库维护", "Menu Library")}</p>
+              <h2>{text(`当前共 ${menuItems.length} 道菜`, `${menuItems.length} dishes total`)}</h2>
             </div>
             <button
               type="button"
@@ -33,7 +41,7 @@ export function ManagePage() {
                 setShowCreateForm((current) => !current);
               }}
             >
-              {showCreateForm ? "收起表单" : "新增菜品"}
+              {showCreateForm ? text("收起表单", "Hide Form") : text("新增菜品", "Add Dish")}
             </button>
           </div>
         </section>
@@ -41,8 +49,8 @@ export function ManagePage() {
         {showCreateForm ? (
           <DishForm
             createdByMode="manage"
-            submitLabel="保存到菜单库"
-            title="新增家庭早餐"
+            submitLabel={text("保存到菜单库", "Save To Menu")}
+            title={text("新增家庭早餐", "Add Family Breakfast")}
             onCancel={() => setShowCreateForm(false)}
             onSubmit={async (draft) => {
               await saveMenuLibraryItem({ ...draft, keepInLibrary: true });
@@ -56,8 +64,8 @@ export function ManagePage() {
             key={editingItem.id}
             createdByMode="manage"
             initialItem={editingItem}
-            submitLabel="保存修改"
-            title={`编辑：${editingItem.name}`}
+            submitLabel={text("保存修改", "Save Changes")}
+            title={text(`编辑：${editingItem.name}`, `Edit: ${editingItem.name}`)}
             onCancel={() => setEditingItem(null)}
             onSubmit={async (draft) => {
               await saveMenuLibraryItem({ ...draft, keepInLibrary: true });
@@ -74,13 +82,13 @@ export function ManagePage() {
                   {item.imageUrl ? (
                     <img alt={item.name} src={item.imageUrl} />
                   ) : (
-                    <div className="dish-placeholder small">{item.category || "早餐"}</div>
+                    <div className="dish-placeholder small">{item.category || text("早餐", "Breakfast")}</div>
                   )}
                 </div>
                 <div>
                   <div className="receipt-title-row">
                     <h3>{item.name}</h3>
-                    <span className="dish-badge">{item.category || "未分类"}</span>
+                    <span className="dish-badge">{item.category || text("未分类", "Uncategorized")}</span>
                   </div>
                   {item.description ? <p className="muted-text">{item.description}</p> : null}
                   {item.recipeNote ? <p className="tiny-text">{item.recipeNote}</p> : null}
@@ -95,7 +103,7 @@ export function ManagePage() {
                     setShowCreateForm(false);
                   }}
                 >
-                  编辑
+                  {text("编辑", "Edit")}
                 </button>
                 <button
                   type="button"
@@ -107,7 +115,7 @@ export function ManagePage() {
                     }
                   }}
                 >
-                  删除
+                  {text("删除", "Delete")}
                 </button>
               </div>
             </article>

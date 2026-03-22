@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { AppShell } from "../components/AppShell";
 import { DishForm } from "../components/DishForm";
+import { LocalizedLink, useI18n } from "../i18n";
 import { useApp } from "../state/AppContext";
 import { getTodayDate } from "../lib/date";
 
@@ -15,41 +15,52 @@ export function MenuPage() {
     addCustomDishToCart,
     updateCartItemQuantity
   } = useApp();
-  const [selectedCategory, setSelectedCategory] = useState("全部");
+  const { text } = useI18n();
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [showCustomForm, setShowCustomForm] = useState(false);
   const today = getTodayDate();
 
   const filteredMenuItems =
-    selectedCategory === "全部"
-      ? menuItems
-      : menuItems.filter((item) => item.category === selectedCategory);
+    !selectedCategory ? menuItems : menuItems.filter((item) => item.category === selectedCategory);
 
   return (
     <AppShell
-      title="早餐点餐"
-      subtitle="参考外卖点餐体验，但为家庭内部流程做了轻量化改造。"
+      title={text("早餐点餐", "Breakfast Ordering")}
+      subtitle={text(
+        "参考外卖点餐体验，但为家庭内部流程做了轻量化改造。",
+        "Delivery-style ordering, simplified for a family kitchen flow."
+      )}
       actions={
-        <Link className="secondary-button compact-button" to={`/orders/${today}`}>
-          今日订单
-        </Link>
+        <LocalizedLink className="secondary-button compact-button" to={`/orders/${today}`}>
+          {text("今日订单", "Today's Order")}
+        </LocalizedLink>
       }
     >
       <section className="card">
         <div className="section-header">
           <div>
-            <p className="section-eyebrow">菜单库</p>
-            <h2>今天想吃什么</h2>
+            <p className="section-eyebrow">{text("菜单库", "Menu Library")}</p>
+            <h2>{text("今天想吃什么", "What do you want tomorrow morning?")}</h2>
           </div>
           <button
             type="button"
             className="secondary-button"
             onClick={() => setShowCustomForm((current) => !current)}
           >
-            {showCustomForm ? "收起临时菜品" : "新增临时菜品"}
+            {showCustomForm
+              ? text("收起临时菜品", "Hide Custom Dish")
+              : text("新增临时菜品", "Add Custom Dish")}
           </button>
         </div>
 
         <div className="chip-row">
+          <button
+            type="button"
+            className={!selectedCategory ? "category-chip active" : "category-chip"}
+            onClick={() => setSelectedCategory("")}
+          >
+            {text("全部", "All")}
+          </button>
           {categories.map((category) => (
             <button
               key={category}
@@ -69,8 +80,8 @@ export function MenuPage() {
         <DishForm
           createdByMode="order"
           defaultKeepInLibrary={false}
-          submitLabel="加入购物车"
-          title="新增本次想吃的早餐"
+          submitLabel={text("加入购物车", "Add To Cart")}
+          title={text("新增本次想吃的早餐", "Add A One-Off Breakfast")}
           onCancel={() => setShowCustomForm(false)}
           onSubmit={async (draft) => {
             await addCustomDishToCart(draft);
@@ -88,22 +99,24 @@ export function MenuPage() {
                 {item.imageUrl ? (
                   <img alt={item.name} src={item.imageUrl} />
                 ) : (
-                  <div className="dish-placeholder">{item.category || "早餐"}</div>
+                  <div className="dish-placeholder">{item.category || text("早餐", "Breakfast")}</div>
                 )}
               </div>
               <div className="dish-card-content">
                 <div className="dish-card-head">
                   <div>
-                    <p className="dish-category">{item.category || "未分类"}</p>
+                    <p className="dish-category">{item.category || text("未分类", "Uncategorized")}</p>
                     <h3>{item.name}</h3>
                   </div>
-                  <span className="dish-badge">家庭常备</span>
+                  <span className="dish-badge">{text("家庭常备", "Family Pick")}</span>
                 </div>
                 {item.description ? <p className="muted-text">{item.description}</p> : null}
                 <div className="dish-card-footer">
                   <div>
-                    <strong>明早待做</strong>
-                    <p className="tiny-text">{item.recipeNote || "可在备餐页查看制作提示"}</p>
+                    <strong>{text("明早待做", "Prep For Tomorrow")}</strong>
+                    <p className="tiny-text">
+                      {item.recipeNote || text("可在备餐页查看制作提示", "Recipe note available in prep view")}
+                    </p>
                   </div>
                   {existingCartItem ? (
                     <div className="quantity-control">
@@ -129,7 +142,7 @@ export function MenuPage() {
                       className="add-button"
                       onClick={() => addMenuItemToCart(item)}
                     >
-                      加入
+                      {text("加入", "Add")}
                     </button>
                   )}
                 </div>
@@ -141,12 +154,12 @@ export function MenuPage() {
 
       <div className="checkout-bar">
         <div>
-          <p className="checkout-bar-kicker">购物车</p>
-          <strong>{cartCount} 份早餐已加入</strong>
+          <p className="checkout-bar-kicker">{text("购物车", "Cart")}</p>
+          <strong>{text(`${cartCount} 份早餐已加入`, `${cartCount} items added`)}</strong>
         </div>
-        <Link className="primary-button" to="/cart">
-          去结算
-        </Link>
+        <LocalizedLink className="primary-button" to="/cart">
+          {text("去结算", "Review Cart")}
+        </LocalizedLink>
       </div>
     </AppShell>
   );

@@ -25,6 +25,8 @@ const LOCAL_ORDER_KEY = "what-to-eat.orders.v1";
 const ROOT_PATH = "whatToEat";
 const MENU_ITEMS_PATH = `${ROOT_PATH}/menuItems`;
 const ORDERS_PATH = `${ROOT_PATH}/orders`;
+const PERMISSION_HINT =
+  "Firebase blocked access to whatToEat/*. Please allow this path in Realtime Database rules.";
 
 function getDb(): Database {
   if (!db) {
@@ -44,6 +46,21 @@ function fromObjectMap<T>(value: unknown): T[] {
   }
 
   return Object.values(value as Record<string, T>);
+}
+
+function normalizeRepositoryError(error: unknown): Error {
+  const message =
+    error instanceof Error ? error.message : typeof error === "string" ? error : "";
+
+  if (/permission denied/i.test(message) || /permission_denied/i.test(message)) {
+    return new Error(PERMISSION_HINT);
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error("Operation failed.");
 }
 
 function getStatus(): RepositoryStatus {
@@ -102,16 +119,20 @@ function createOrder(date: string, items: OrderItem[], createdAt?: string): Dail
 
 async function seedSampleMenuIfNeeded() {
   if (isFirebaseConfigured && db) {
-    const database = getDb();
-    await ensureFirebaseReady();
-    const snapshot = await get(databaseRef(database, MENU_ITEMS_PATH));
+    try {
+      const database = getDb();
+      await ensureFirebaseReady();
+      const snapshot = await get(databaseRef(database, MENU_ITEMS_PATH));
 
-    if (snapshot.exists()) {
+      if (snapshot.exists()) {
+        return;
+      }
+
+      await set(databaseRef(database, MENU_ITEMS_PATH), toObjectMap(sampleMenuItems));
       return;
+    } catch (error) {
+      throw normalizeRepositoryError(error);
     }
-
-    await set(databaseRef(database, MENU_ITEMS_PATH), toObjectMap(sampleMenuItems));
-    return;
   }
 
   const existing = readJson<MenuItem[]>(LOCAL_MENU_KEY, []);
@@ -124,10 +145,14 @@ async function seedSampleMenuIfNeeded() {
 
 async function getMenuItems(): Promise<MenuItem[]> {
   if (isFirebaseConfigured && db) {
-    const database = getDb();
-    await ensureFirebaseReady();
-    const snapshot = await get(databaseRef(database, MENU_ITEMS_PATH));
-    return sortByUpdatedAt(fromObjectMap<MenuItem>(snapshot.val()));
+    try {
+      const database = getDb();
+      await ensureFirebaseReady();
+      const snapshot = await get(databaseRef(database, MENU_ITEMS_PATH));
+      return sortByUpdatedAt(fromObjectMap<MenuItem>(snapshot.val()));
+    } catch (error) {
+      throw normalizeRepositoryError(error);
+    }
   }
 
   return sortByUpdatedAt(readJson<MenuItem[]>(LOCAL_MENU_KEY, []));
@@ -142,26 +167,42 @@ async function saveMenuItem(draft: MenuDraft): Promise<MenuItem> {
   const imageUrl = draft.file ? await uploadImage(draft.file) : draft.imageUrl;
 
   if (isFirebaseConfigured && db) {
-    const database = getDb();
-    await ensureFirebaseReady();
-    const id = draft.id ?? createId("menu");
-    const itemRef = databaseRef(database, `${MENU_ITEMS_PATH}/${id}`);
-    const existing = await get(itemRef);
-    const item: MenuItem = {
-      id,
-      name: draft.name.trim(),
-      description: draft.description?.trim(),
-      category: draft.category?.trim(),
-      recipeNote: draft.recipeNote?.trim(),
-      imageUrl,
-      keepInLibrary: draft.keepInLibrary,
-      createdByMode: draft.createdByMode,
-      archived: false,
-      createdAt: existing.exists() ? (existing.val() as MenuItem).createdAt : now,
-      updatedAt: now
-    };
-    await set(itemRef, item);
-    return item;
+    try {
+      const database = getDb();
+      await ensureFirebaseReady();
+      const id = draft.id ?? createId("menu");
+      const itemRef = databaseRef(database, `${MENU_ITEMS_PATH}/${id}`);
+      let existingCreatedAt: string | undefined;
+
+      try {
+        const existing = await get(itemRef);
+        existingCreatedAt = existing.exists()
+          ? (existing.val() as MenuItem).createdAt
+          : undefined;
+      } catch (error) {
+        if (!/permission denied/i.test(error instanceof Error ? error.message : "")) {
+          throw error;
+        }
+      }
+
+      const item: MenuItem = {
+        id,
+        name: draft.name.trim(),
+        description: draft.description?.trim(),
+        category: draft.category?.trim(),
+        recipeNote: draft.recipeNote?.trim(),
+        imageUrl,
+        keepInLibrary: draft.keepInLibrary,
+        createdByMode: draft.createdByMode,
+        archived: false,
+        createdAt: existingCreatedAt ?? now,
+        updatedAt: now
+      };
+      await set(itemRef, item);
+      return item;
+    } catch (error) {
+      throw normalizeRepositoryError(error);
+    }
   }
 
   const currentItems = readJson<MenuItem[]>(LOCAL_MENU_KEY, []);
@@ -193,10 +234,14 @@ async function saveMenuItem(draft: MenuDraft): Promise<MenuItem> {
 
 async function deleteMenuItem(id: string): Promise<void> {
   if (isFirebaseConfigured && db) {
-    const database = getDb();
-    await ensureFirebaseReady();
-    await remove(databaseRef(database, `${MENU_ITEMS_PATH}/${id}`));
-    return;
+    try {
+      const database = getDb();
+      await ensureFirebaseReady();
+      await remove(databaseRef(database, `${MENU_ITEMS_PATH}/${id}`));
+      return;
+    } catch (error) {
+      throw normalizeRepositoryError(error);
+    }
   }
 
   const currentItems = readJson<MenuItem[]>(LOCAL_MENU_KEY, []);
@@ -216,10 +261,14 @@ function writeLocalOrders(orders: Record<string, DailyOrder>) {
 
 async function getOrderByDate(date: string): Promise<DailyOrder | null> {
   if (isFirebaseConfigured && db) {
-    const database = getDb();
-    await ensureFirebaseReady();
-    const snapshot = await get(databaseRef(database, `${ORDERS_PATH}/${date}`));
-    return snapshot.exists() ? (snapshot.val() as DailyOrder) : null;
+    try {
+      const database = getDb();
+      await ensureFirebaseReady();
+      const snapshot = await get(databaseRef(database, `${ORDERS_PATH}/${date}`));
+      return snapshot.exists() ? (snapshot.val() as DailyOrder) : null;
+    } catch (error) {
+      throw normalizeRepositoryError(error);
+    }
   }
 
   const orders = readLocalOrders();
@@ -244,14 +293,18 @@ async function saveOrder(date: string, items: OrderDraftItem[]): Promise<DailyOr
     }));
 
   if (isFirebaseConfigured && db) {
-    const database = getDb();
-    await ensureFirebaseReady();
-    const orderRef = databaseRef(database, `${ORDERS_PATH}/${date}`);
-    const existing = await get(orderRef);
-    const existingOrder = existing.exists() ? (existing.val() as DailyOrder) : null;
-    const order = createOrder(date, orderItems, existingOrder?.createdAt);
-    await set(orderRef, order);
-    return order;
+    try {
+      const database = getDb();
+      await ensureFirebaseReady();
+      const orderRef = databaseRef(database, `${ORDERS_PATH}/${date}`);
+      const existing = await get(orderRef);
+      const existingOrder = existing.exists() ? (existing.val() as DailyOrder) : null;
+      const order = createOrder(date, orderItems, existingOrder?.createdAt);
+      await set(orderRef, order);
+      return order;
+    } catch (error) {
+      throw normalizeRepositoryError(error);
+    }
   }
 
   const orders = readLocalOrders();
@@ -269,10 +322,14 @@ async function addItemsToOrder(date: string, items: OrderDraftItem[]): Promise<D
   order.status = existingOrder?.status ?? "submitted";
 
   if (isFirebaseConfigured && db) {
-    const database = getDb();
-    await ensureFirebaseReady();
-    await set(databaseRef(database, `${ORDERS_PATH}/${date}`), order);
-    return order;
+    try {
+      const database = getDb();
+      await ensureFirebaseReady();
+      await set(databaseRef(database, `${ORDERS_PATH}/${date}`), order);
+      return order;
+    } catch (error) {
+      throw normalizeRepositoryError(error);
+    }
   }
 
   const orders = readLocalOrders();
@@ -298,10 +355,14 @@ async function updateExistingOrder(
   updatedOrder.updatedAt = nowIso();
 
   if (isFirebaseConfigured && db) {
-    const database = getDb();
-    await ensureFirebaseReady();
-    await set(databaseRef(database, `${ORDERS_PATH}/${date}`), updatedOrder);
-    return updatedOrder;
+    try {
+      const database = getDb();
+      await ensureFirebaseReady();
+      await set(databaseRef(database, `${ORDERS_PATH}/${date}`), updatedOrder);
+      return updatedOrder;
+    } catch (error) {
+      throw normalizeRepositoryError(error);
+    }
   }
 
   const orders = readLocalOrders();

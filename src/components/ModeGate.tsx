@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useI18n } from "../i18n";
 import { useApp } from "../state/AppContext";
 
 interface ModeGateProps {
@@ -13,6 +14,7 @@ export function ModeGate({ title, description, children }: ModeGateProps) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const managerPinConfigured = Boolean(import.meta.env.VITE_MANAGER_PIN?.trim());
+  const { text } = useI18n();
 
   if (managerUnlocked || !managerPinConfigured) {
     return <>{children}</>;
@@ -21,17 +23,17 @@ export function ModeGate({ title, description, children }: ModeGateProps) {
   return (
     <section className="card gate-card">
       <div>
-        <p className="section-eyebrow">做饭 / 管理模式</p>
+        <p className="section-eyebrow">{text("做饭 / 管理模式", "Kitchen / Admin Mode")}</p>
         <h2>{title}</h2>
         <p className="muted-text">{description}</p>
       </div>
 
       <label className="field">
-        <span>管理 PIN</span>
+        <span>{text("管理 PIN", "Manager PIN")}</span>
         <input
           value={pin}
           onChange={(event) => setPin(event.target.value)}
-          placeholder="输入家庭管理员 PIN"
+          placeholder={text("输入家庭管理员 PIN", "Enter family manager PIN")}
           type="password"
         />
       </label>
@@ -44,11 +46,11 @@ export function ModeGate({ title, description, children }: ModeGateProps) {
         onClick={() => {
           const success = unlockManager(pin);
           if (!success) {
-            setError("PIN 不正确，再试一次。");
+            setError(text("PIN 不正确，再试一次。", "Incorrect PIN. Please try again."));
           }
         }}
       >
-        进入做饭模式
+        {text("进入做饭模式", "Enter Kitchen Mode")}
       </button>
     </section>
   );

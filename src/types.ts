@@ -113,3 +113,7 @@ export interface AppRepository {
     status: OrderProgressStage
   ): Promise<DailyOrder | null>;
 }
+
+export interface RuntimeNotice {
+  message: string;
+}

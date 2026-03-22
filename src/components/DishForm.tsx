@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18n } from "../i18n";
 import type { MenuDraft, MenuItem, UserMode } from "../types";
 
 interface DishFormProps {
@@ -30,6 +31,7 @@ export function DishForm({
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const { text } = useI18n();
 
   return (
     <form
@@ -37,7 +39,7 @@ export function DishForm({
       onSubmit={async (event) => {
         event.preventDefault();
         if (!name.trim()) {
-          setError("先填写菜品名称。");
+          setError(text("先填写菜品名称。", "Please enter a dish name first."));
           return;
         }
 
@@ -64,7 +66,11 @@ export function DishForm({
           setFile(null);
         } catch (submitError) {
           console.error(submitError);
-          setError("保存失败，请稍后再试。");
+          setError(
+            submitError instanceof Error
+              ? submitError.message
+              : text("保存失败，请稍后再试。", "Save failed. Please try again.")
+          );
         } finally {
           setSubmitting(false);
         }
@@ -72,7 +78,7 @@ export function DishForm({
     >
       <div className="section-header">
         <div>
-          <p className="section-eyebrow">新增 / 编辑菜品</p>
+          <p className="section-eyebrow">{text("新增 / 编辑菜品", "Add / Edit Dish")}</p>
           <h3>{title}</h3>
         </div>
         {onCancel ? (
@@ -81,42 +87,45 @@ export function DishForm({
             className="secondary-button"
             onClick={onCancel}
           >
-            取消
+            {text("取消", "Cancel")}
           </button>
         ) : null}
       </div>
 
       <label className="field">
-        <span>菜品名称</span>
+        <span>{text("菜品名称", "Dish Name")}</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="例如：手抓饼加蛋"
+          placeholder={text("例如：手抓饼加蛋", "Example: Egg pancake")}
         />
       </label>
 
       <label className="field">
-        <span>简要描述</span>
+        <span>{text("简要描述", "Short Description")}</span>
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="可以写口味、搭配或提醒"
+          placeholder={text(
+            "可以写口味、搭配或提醒",
+            "Flavor, pairing, or a short reminder"
+          )}
           rows={3}
         />
       </label>
 
       <div className="field-grid">
         <label className="field">
-          <span>分类</span>
+          <span>{text("分类", "Category")}</span>
           <input
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            placeholder="主食 / 蛋类 / 饮品"
+            placeholder={text("主食 / 蛋类 / 饮品", "Staple / Egg / Drink")}
           />
         </label>
 
         <label className="field">
-          <span>图片</span>
+          <span>{text("图片", "Image")}</span>
           <input
             accept="image/*"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
@@ -126,11 +135,14 @@ export function DishForm({
       </div>
 
       <label className="field">
-        <span>做法说明 / 备注预留</span>
+        <span>{text("做法说明 / 备注预留", "Recipe Note / Prep Note")}</span>
         <textarea
           value={recipeNote}
           onChange={(event) => setRecipeNote(event.target.value)}
-          placeholder="例如：面包别烤太久、鸡蛋要溏心"
+          placeholder={text(
+            "例如：面包别烤太久、鸡蛋要溏心",
+            "Example: Keep toast soft and egg runny"
+          )}
           rows={3}
         />
       </label>
@@ -142,15 +154,20 @@ export function DishForm({
           type="checkbox"
         />
         <div>
-          <strong>加入家庭菜单库</strong>
-          <p className="muted-text">不勾选时，这道菜会作为本次订单的一次性菜品。</p>
+          <strong>{text("加入家庭菜单库", "Add To Family Menu")}</strong>
+          <p className="muted-text">
+            {text(
+              "不勾选时，这道菜会作为本次订单的一次性菜品。",
+              "If unchecked, this dish is only used for the current order."
+            )}
+          </p>
         </div>
       </label>
 
       {error ? <p className="inline-error">{error}</p> : null}
 
       <button className="primary-button" disabled={submitting} type="submit">
-        {submitting ? "保存中..." : submitLabel}
+        {submitting ? text("保存中...", "Saving...") : submitLabel}
       </button>
     </form>
   );
