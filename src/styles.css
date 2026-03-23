@@ -57,6 +57,13 @@ button {
   border: none;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+  transform: none;
+  box-shadow: none;
+}
+
 img {
   display: block;
   max-width: 100%;
@@ -639,6 +646,56 @@ img {
   display: grid;
   gap: 6px;
   flex: 1;
+}
+
+.random-pick-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(45, 38, 24, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.random-pick-modal {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid rgba(86, 71, 36, 0.14);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 242, 0.98), rgba(255, 246, 220, 0.98));
+  box-shadow: 0 26px 60px rgba(45, 38, 24, 0.24);
+}
+
+.random-pick-media {
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #ffe38a, #fff5d7);
+}
+
+.random-pick-media img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.random-pick-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.random-pick-copy h3,
+.random-pick-copy p,
+.random-pick-note {
+  margin: 0;
+}
+
+.random-pick-note {
+  text-align: center;
 }
 
 .receipt-title-row h3 {
