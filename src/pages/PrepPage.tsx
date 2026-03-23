@@ -79,6 +79,12 @@ export function PrepPage() {
             <p className="section-eyebrow">{text("厨房出单票", "Kitchen Ticket")}</p>
             <h2>{selectedDate} {text("今日订单", "Daily Order")}</h2>
             <p className="muted-text">{formatDisplayDate(selectedDate)}</p>
+            {order?.customerNote ? (
+              <p className="muted-text">
+                {text("订单备注：", "Order note: ")}
+                {order.customerNote}
+              </p>
+            ) : null}
           </div>
 
           {loading ? (

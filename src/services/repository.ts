@@ -104,13 +104,24 @@ async function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-function createOrder(date: string, items: OrderItem[], createdAt?: string): DailyOrder {
+function normalizeCustomerNote(customerNote?: string) {
+  const trimmed = customerNote?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function createOrder(
+  date: string,
+  items: OrderItem[],
+  createdAt?: string,
+  customerNote?: string
+): DailyOrder {
   const now = nowIso();
   return {
     id: date,
     orderDate: date,
     label: toOrderLabel(date),
     status: "submitted",
+    customerNote: normalizeCustomerNote(customerNote),
     items,
     createdAt: createdAt ?? now,
     updatedAt: now
@@ -275,7 +286,11 @@ async function getOrderByDate(date: string): Promise<DailyOrder | null> {
   return orders[date] ?? null;
 }
 
-async function saveOrder(date: string, items: OrderDraftItem[]): Promise<DailyOrder> {
+async function saveOrder(
+  date: string,
+  items: OrderDraftItem[],
+  customerNote?: string
+): Promise<DailyOrder> {
   const orderItems: OrderItem[] = items
     .filter((item) => item.quantity > 0)
     .map((item) => ({
@@ -299,7 +314,13 @@ async function saveOrder(date: string, items: OrderDraftItem[]): Promise<DailyOr
       const orderRef = databaseRef(database, `${ORDERS_PATH}/${date}`);
       const existing = await get(orderRef);
       const existingOrder = existing.exists() ? (existing.val() as DailyOrder) : null;
-      const order = createOrder(date, orderItems, existingOrder?.createdAt);
+      const order = createOrder(
+        date,
+        orderItems,
+        existingOrder?.createdAt,
+        customerNote ?? existingOrder?.customerNote
+      );
+      order.status = existingOrder?.status ?? "submitted";
       await set(orderRef, order);
       return order;
     } catch (error) {
@@ -309,16 +330,31 @@ async function saveOrder(date: string, items: OrderDraftItem[]): Promise<DailyOr
 
   const orders = readLocalOrders();
   const existingOrder = orders[date];
-  const order = createOrder(date, orderItems, existingOrder?.createdAt);
+  const order = createOrder(
+    date,
+    orderItems,
+    existingOrder?.createdAt,
+    customerNote ?? existingOrder?.customerNote
+  );
+  order.status = existingOrder?.status ?? "submitted";
   orders[date] = order;
   writeLocalOrders(orders);
   return order;
 }
 
-async function addItemsToOrder(date: string, items: OrderDraftItem[]): Promise<DailyOrder> {
+async function addItemsToOrder(
+  date: string,
+  items: OrderDraftItem[],
+  customerNote?: string
+): Promise<DailyOrder> {
   const existingOrder = await getOrderByDate(date);
   const mergedItems = mergeOrderItems(existingOrder?.items ?? [], items);
-  const order = createOrder(date, mergedItems, existingOrder?.createdAt);
+  const order = createOrder(
+    date,
+    mergedItems,
+    existingOrder?.createdAt,
+    customerNote ?? existingOrder?.customerNote
+  );
   order.status = existingOrder?.status ?? "submitted";
 
   if (isFirebaseConfigured && db) {

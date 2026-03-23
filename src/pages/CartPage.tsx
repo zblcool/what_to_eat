@@ -16,6 +16,7 @@ export function CartPage() {
   } = useApp();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [customerNote, setCustomerNote] = useState("");
   const today = getTodayDate();
   const { localizePath, text } = useI18n();
 
@@ -101,6 +102,18 @@ export function CartPage() {
                 <strong>{text("今天提交，明早制作", "Submit today, cook tomorrow")}</strong>
               </div>
             </div>
+            <label className="field">
+              <span>{text("结算备注", "Checkout Note")}</span>
+              <textarea
+                value={customerNote}
+                onChange={(event) => setCustomerNote(event.target.value)}
+                placeholder={text(
+                  "例如：豆浆少糖、鸡蛋做溏心、不要放香菜",
+                  "Example: less sugar, runny egg, no cilantro"
+                )}
+                rows={3}
+              />
+            </label>
             <div className="action-row">
               <button type="button" className="secondary-button" onClick={clearCart}>
                 {text("清空购物车", "Clear Cart")}
@@ -112,7 +125,7 @@ export function CartPage() {
                 onClick={async () => {
                   setSubmitting(true);
                   try {
-                    const order = await submitCartToTodayOrder();
+                    const order = await submitCartToTodayOrder(customerNote);
                     navigate(localizePath(`/orders/${order.orderDate}`));
                   } finally {
                     setSubmitting(false);

@@ -49,6 +49,7 @@ export function OrderPage() {
   const [savedHint, setSavedHint] = useState("");
   const [order, setOrder] = useState<DailyOrder | null>(null);
   const [draftItems, setDraftItems] = useState<OrderDraftItem[]>([]);
+  const [customerNote, setCustomerNote] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +59,7 @@ export function OrderPage() {
       const currentOrder = await fetchOrderByDate(date);
       if (!cancelled) {
         setOrder(currentOrder);
+        setCustomerNote(currentOrder?.customerNote ?? "");
         setDraftItems(
           (currentOrder?.items ?? []).map((item) => ({
             menuItemId: item.menuItemId,
@@ -104,6 +106,18 @@ export function OrderPage() {
           </div>
           {savedHint ? <span className="success-hint">{savedHint}</span> : null}
         </div>
+        <label className="field">
+          <span>{text("订单备注", "Order Note")}</span>
+          <textarea
+            value={customerNote}
+            onChange={(event) => setCustomerNote(event.target.value)}
+            placeholder={text(
+              "例如：牛奶加热、别放辣、面包烤脆一点",
+              "Example: heat the milk, no chili, toast the bread more"
+            )}
+            rows={3}
+          />
+        </label>
 
         {loading ? (
           <p className="muted-text">{text("正在读取订单...", "Loading order...")}</p>
@@ -205,8 +219,9 @@ export function OrderPage() {
           onClick={async () => {
             setSaving(true);
             try {
-              const savedOrder = await saveOrderItems(date, draftItems);
+              const savedOrder = await saveOrderItems(date, draftItems, customerNote);
               setOrder(savedOrder);
+              setCustomerNote(savedOrder.customerNote ?? "");
               setSavedHint(text("已保存", "Saved"));
               window.setTimeout(() => setSavedHint(""), 1600);
             } finally {

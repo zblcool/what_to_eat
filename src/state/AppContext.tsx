@@ -40,15 +40,17 @@ interface AppContextValue {
   updateCartItemQuantity: (cartItemId: string, quantity: number) => void;
   removeCartItem: (cartItemId: string) => void;
   clearCart: () => void;
-  submitCartToTodayOrder: () => Promise<DailyOrder>;
+  submitCartToTodayOrder: (customerNote?: string) => Promise<DailyOrder>;
   fetchOrderByDate: (date: string) => Promise<DailyOrder | null>;
   saveOrderItems: (
     date: string,
-    items: OrderDraftItem[]
+    items: OrderDraftItem[],
+    customerNote?: string
   ) => Promise<DailyOrder>;
   addItemsToOrder: (
     date: string,
-    items: OrderDraftItem[]
+    items: OrderDraftItem[],
+    customerNote?: string
   ) => Promise<DailyOrder>;
   setOrderItemQuantity: (
     date: string,
@@ -241,11 +243,11 @@ export function AppProvider({ children }: PropsWithChildren) {
     setCart([]);
   }
 
-  async function submitCartToTodayOrder() {
+  async function submitCartToTodayOrder(customerNote?: string) {
     try {
       const today = getTodayDate();
       const draftItems = cart.map(cartToOrderDraft);
-      const order = await repository.addItemsToOrder(today, draftItems);
+      const order = await repository.addItemsToOrder(today, draftItems, customerNote);
       setCart([]);
       setRuntimeNotice(null);
       return order;
@@ -271,9 +273,13 @@ export function AppProvider({ children }: PropsWithChildren) {
     }
   }
 
-  async function saveOrderItems(date: string, items: OrderDraftItem[]) {
+  async function saveOrderItems(
+    date: string,
+    items: OrderDraftItem[],
+    customerNote?: string
+  ) {
     try {
-      const order = await repository.saveOrder(date, items);
+      const order = await repository.saveOrder(date, items, customerNote);
       setRuntimeNotice(null);
       return order;
     } catch (error) {
@@ -284,9 +290,13 @@ export function AppProvider({ children }: PropsWithChildren) {
     }
   }
 
-  async function addItemsToOrder(date: string, items: OrderDraftItem[]) {
+  async function addItemsToOrder(
+    date: string,
+    items: OrderDraftItem[],
+    customerNote?: string
+  ) {
     try {
-      const order = await repository.addItemsToOrder(date, items);
+      const order = await repository.addItemsToOrder(date, items, customerNote);
       setRuntimeNotice(null);
       return order;
     } catch (error) {

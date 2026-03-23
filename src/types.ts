@@ -53,6 +53,7 @@ export interface DailyOrder {
   orderDate: string;
   label: string;
   status: OrderProgressStage;
+  customerNote?: string;
   items: OrderItem[];
   createdAt: string;
   updatedAt: string;
@@ -95,14 +96,22 @@ export interface AppRepository {
   deleteMenuItem(id: string): Promise<void>;
   uploadImage(file: File): Promise<string>;
   getOrderByDate(date: string): Promise<DailyOrder | null>;
-  saveOrder(date: string, items: OrderDraftItem[]): Promise<DailyOrder>;
+  saveOrder(
+    date: string,
+    items: OrderDraftItem[],
+    customerNote?: string
+  ): Promise<DailyOrder>;
   updateOrderItemQuantity(
     date: string,
     itemId: string,
     quantity: number
   ): Promise<DailyOrder | null>;
   removeOrderItem(date: string, itemId: string): Promise<DailyOrder | null>;
-  addItemsToOrder(date: string, items: OrderDraftItem[]): Promise<DailyOrder>;
+  addItemsToOrder(
+    date: string,
+    items: OrderDraftItem[],
+    customerNote?: string
+  ): Promise<DailyOrder>;
   togglePrepDone(
     date: string,
     itemId: string,
