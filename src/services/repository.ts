@@ -94,6 +94,22 @@ function writeJson(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function sanitizeForDatabase<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeForDatabase(entry)) as T;
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, entry]) => entry !== undefined)
+        .map(([key, entry]) => [key, sanitizeForDatabase(entry)])
+    ) as T;
+  }
+
+  return value;
+}
+
 async function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -139,7 +155,10 @@ async function seedSampleMenuIfNeeded() {
         return;
       }
 
-      await set(databaseRef(database, MENU_ITEMS_PATH), toObjectMap(sampleMenuItems));
+      await set(
+        databaseRef(database, MENU_ITEMS_PATH),
+        sanitizeForDatabase(toObjectMap(sampleMenuItems))
+      );
       return;
     } catch (error) {
       throw normalizeRepositoryError(error);
@@ -209,7 +228,7 @@ async function saveMenuItem(draft: MenuDraft): Promise<MenuItem> {
         createdAt: existingCreatedAt ?? now,
         updatedAt: now
       };
-      await set(itemRef, item);
+      await set(itemRef, sanitizeForDatabase(item));
       return item;
     } catch (error) {
       throw normalizeRepositoryError(error);
@@ -321,7 +340,7 @@ async function saveOrder(
         customerNote ?? existingOrder?.customerNote
       );
       order.status = existingOrder?.status ?? "submitted";
-      await set(orderRef, order);
+      await set(orderRef, sanitizeForDatabase(order));
       return order;
     } catch (error) {
       throw normalizeRepositoryError(error);
@@ -361,7 +380,7 @@ async function addItemsToOrder(
     try {
       const database = getDb();
       await ensureFirebaseReady();
-      await set(databaseRef(database, `${ORDERS_PATH}/${date}`), order);
+      await set(databaseRef(database, `${ORDERS_PATH}/${date}`), sanitizeForDatabase(order));
       return order;
     } catch (error) {
       throw normalizeRepositoryError(error);
@@ -394,7 +413,10 @@ async function updateExistingOrder(
     try {
       const database = getDb();
       await ensureFirebaseReady();
-      await set(databaseRef(database, `${ORDERS_PATH}/${date}`), updatedOrder);
+      await set(
+        databaseRef(database, `${ORDERS_PATH}/${date}`),
+        sanitizeForDatabase(updatedOrder)
+      );
       return updatedOrder;
     } catch (error) {
       throw normalizeRepositoryError(error);

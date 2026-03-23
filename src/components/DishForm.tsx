@@ -125,7 +125,7 @@ export function DishForm({
         </label>
 
         <label className="field">
-          <span>{text("图片", "Image")}</span>
+          <span>{text("图片（可选）", "Image (Optional)")}</span>
           <input
             accept="image/*"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
